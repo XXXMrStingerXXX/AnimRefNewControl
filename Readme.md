@@ -13,7 +13,7 @@ Download from releases here: [Releases](https://github.com/lettucegoblin/AnimRef
 Windows, Mac, and linux support(need testing on mac and linux; If you're on these platforms please mention how they are in the issues)
 
 ## Shortcuts
-Cmd replaces Ctrl on macOS. Press **Ctrl+H** in the app to see this list.
+Keys follow [PureRef's layout](https://www.pureref.com/handbook/shortcuts/all-shortcuts/) (Cmd instead of Ctrl on macOS). Press **Ctrl+H** in the app to see this list.
 
 **You can change any key:** in the Ctrl+H panel, click a key and press the new one, use **+** to add another key and **×** to remove one, and use **↺** or **Reset all** to go back to the defaults. Changes are saved automatically. Giving a key to one action takes it away from any other action that used it. For example, bind Space to *Play / pause* to start and stop videos with the space bar. Holding Space and dragging still pans.
 
