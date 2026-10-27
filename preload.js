@@ -4,22 +4,10 @@ const {
 } = require('electron')
 
 const interact = require('./interact.min.js')
-const {
-  SHORTCUTS, MOUSE_CONTROLS, MODIFIER_CODES,
-  displayKey, comboFromEvent, normalizeCombo, defaultBindings, effectiveBindings, buildKeyMap,
-} = require('./shortcuts.js')
+const { SHORTCUTS, MOUSE_CONTROLS, displayKey, comboFromEvent, buildKeyMap } = require('./shortcuts.js')
 
 const isMac = process.platform === 'darwin'
-
-// Key bindings: defaults from shortcuts.js plus the user's saved changes (kept by main.js).
-let keyOverrides = {}
-try {
-  keyOverrides = ipcRenderer.sendSync('get-keybinds') || {}
-} catch (err) {
-  keyOverrides = {}
-}
-let bindings = effectiveBindings(keyOverrides)
-let keyMap = buildKeyMap(bindings)
+const keyMap = buildKeyMap()
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|ogv|mkv)$/i
 const CLIPBOARD_PREFIX = 'animref-clipboard:'
 
@@ -299,18 +287,9 @@ let mouseObj = {
 document.addEventListener('keydown', evt => {
   mouseObj.keys[evt.code] = true
 
-  if (capture) {
-    handleCapture(evt)
-    return
-  }
-  const combo = comboFromEvent(evt, isMac)
-  if (helpIsOpen()) {
-    // Typing in the search box shouldn't trigger shortcuts.
-    const typing = evt.target && evt.target.tagName == 'INPUT'
-    if (evt.code === 'Escape' || (!typing && keyMap.get(combo)?.id == 'help')) {
-      evt.preventDefault()
-      closeHelp()
-    }
+  if (helpIsOpen() && (evt.code === 'Escape' || evt.code === 'KeyH')) {
+    evt.preventDefault()
+    closeHelp()
     return
   }
   if (slideshow.timer) {
@@ -319,17 +298,16 @@ document.addEventListener('keydown', evt => {
   }
 
   if (evt.code === 'Space') {
-    // Space actions fire on release, so holding Space + dragging can still pan.
     evt.preventDefault()
     if (!evt.repeat) {
       mouseObj.space = true
       mouseObj.spaceUsed = false
-      mouseObj.spaceCombo = combo
+      mouseObj.spaceWithCtrl = evt.ctrlKey || evt.metaKey
     }
     return
   }
 
-  const shortcut = keyMap.get(combo)
+  const shortcut = keyMap.get(comboFromEvent(evt, isMac))
   if (!shortcut) return
   evt.preventDefault()
   if (evt.repeat && !shortcut.repeat) return
@@ -339,11 +317,12 @@ document.addEventListener('keydown', evt => {
 
 document.addEventListener('keyup', evt => {
   mouseObj.keys[evt.code] = false
-  if (evt.code === 'Space' && mouseObj.space) {
+  if (evt.code === 'Space') {
     mouseObj.space = false
-    if (!mouseObj.spaceUsed && !helpIsOpen()) {
-      const shortcut = keyMap.get(mouseObj.spaceCombo)
-      if (shortcut && (state.mode != 'edit-video' || shortcut.inEdit)) runAction(shortcut.id)
+    // A tap (no drag while held) focuses, like AnimRefNewControl. Holding + dragging pans/zooms as before.
+    if (!mouseObj.spaceUsed && state.mode != 'edit-video') {
+      if (mouseObj.spaceWithCtrl) focusCanvas()
+      else focusSelection()
     }
   }
 })
@@ -501,11 +480,8 @@ document.addEventListener('mousemove', (e) => {
   } else if (e.buttons == 4) { // middle mouse drag = move
     e.preventDefault()
     handleMove(e.movementX, e.movementY)
-  } else if (e.buttons == 2 && mouseObj.initClientPos) {
+  } else if (e.buttons == 2) {
     e.preventDefault()
-    // Only start moving the window after a real drag, so a plain right-click just opens the menu.
-    const moved = Math.hypot(e.screenX - mouseObj.initClientPos.x, e.screenY - mouseObj.initClientPos.y)
-    if (!mouseObj.dragging && moved < 4) return
     ipcRenderer.send('move-electron-window', e.screenX, e.screenY, mouseObj.initPos)
     mouseObj.dragging = true;
   }
@@ -1616,19 +1592,6 @@ function playPause() {
   })
 }
 
-// Selects every video in the scene and pauses (or plays) them all together.
-function setAllVideosPlaying(play) {
-  const objs = state.elements.filter(isVideoObj)
-  if (state.mode != 'edit-video') {
-    clearAllSelected()
-    objs.forEach(o => setSelected(o, true))
-  }
-  const videos = state.mode == 'edit-video' ? videoTargets() : objs.map(getVideoEl).filter(Boolean)
-  if (!videos.length) return hud('No videos in the scene')
-  videos.forEach(v => play ? v.play().catch(() => { }) : v.pause())
-  hud(`${play ? 'Playing' : 'Paused'} all ${videos.length} video${videos.length == 1 ? '' : 's'}`)
-}
-
 function seekBy(seconds) {
   withVideos(videos => {
     videos.forEach(v => {
@@ -1690,223 +1653,55 @@ function helpIsOpen() {
 }
 
 function closeHelp() {
-  capture = null
   const el = document.getElementById('helpOverlay')
   if (el) el.remove()
 }
-
-/* ---- Key rebinding ---- */
-
-// While set, the next key press is recorded as a binding: { id, index } (index -1 adds a new key).
-let capture = null
-const DEFAULTS = defaultBindings()
-const LABELS = new Map(SHORTCUTS.map(s => [s.id, s.label]))
-
-function saveBindings() {
-  keyOverrides = {}
-  for (const [id, keys] of Object.entries(bindings)) {
-    if (JSON.stringify(keys) !== JSON.stringify(DEFAULTS[id])) keyOverrides[id] = keys
-  }
-  keyMap = buildKeyMap(bindings)
-  ipcRenderer.send('set-keybinds', keyOverrides)
-}
-
-function assignKey(id, index, combo) {
-  combo = normalizeCombo(combo)
-  const moved = []
-  for (const [otherId, keys] of Object.entries(bindings)) {
-    if (otherId == id) continue
-    if (keys.includes(combo)) {
-      bindings[otherId] = keys.filter(k => k !== combo)
-      moved.push(LABELS.get(otherId))
-    }
-  }
-  const keys = [...bindings[id]]
-  if (index >= 0 && index < keys.length) keys[index] = combo
-  else keys.push(combo)
-  bindings[id] = keys.filter((k, i) => keys.indexOf(k) === i)
-  saveBindings()
-  const name = displayKey(combo, isMac)
-  hud(moved.length ? `${name} moved from “${moved.join('”, “')}”` : `${LABELS.get(id)}: ${name}`, 2600)
-}
-
-function removeKey(id, index) {
-  bindings[id] = bindings[id].filter((k, i) => i != index)
-  saveBindings()
-  renderHelp()
-}
-
-function resetKeys(id) {
-  if (id) {
-    bindings[id] = [...DEFAULTS[id]]
-    // a default key may have been given to another action; take it back
-    for (const [otherId, keys] of Object.entries(bindings)) {
-      if (otherId != id) bindings[otherId] = keys.filter(k => !DEFAULTS[id].includes(k))
-    }
-  } else {
-    bindings = defaultBindings()
-  }
-  saveBindings()
-  renderHelp()
-  hud(id ? `Reset “${LABELS.get(id)}”` : 'All shortcuts reset to defaults')
-}
-
-function handleCapture(evt) {
-  evt.preventDefault()
-  evt.stopPropagation()
-  if (MODIFIER_CODES.has(evt.code)) return // wait for the real key
-  const target = capture
-  capture = null
-  if (evt.code === 'Escape') {
-    renderHelp()
-    return
-  }
-  assignKey(target.id, target.index, comboFromEvent(evt, isMac))
-  renderHelp()
-}
-
-function startCapture(id, index) {
-  capture = { id, index }
-  renderHelp()
-}
-
-/* ---- Help overlay ---- */
-
-let helpFilter = ''
 
 function openHelp() {
   if (helpIsOpen()) return closeHelp()
   const overlay = document.createElement('div')
   overlay.id = 'helpOverlay'
-
-  const header = document.createElement('div')
-  header.className = 'helpHeader'
   const title = document.createElement('h2')
   title.textContent = 'Shortcuts'
-  const search = document.createElement('input')
-  search.type = 'search'
-  search.placeholder = 'Search…'
-  search.className = 'helpSearch'
-  search.value = helpFilter
-  search.addEventListener('input', () => {
-    helpFilter = search.value
-    renderHelp()
-  })
-  const resetAll = document.createElement('button')
-  resetAll.className = 'helpButton'
-  resetAll.textContent = 'Reset all'
-  resetAll.addEventListener('click', () => resetKeys(null))
-  const close = document.createElement('button')
-  close.className = 'helpButton'
-  close.textContent = 'Close'
-  close.addEventListener('click', closeHelp)
-  header.append(title, search, resetAll, close)
-
   const hint = document.createElement('p')
   hint.className = 'helpHint'
-  hint.textContent = 'Click a key to change it, + to add another, × to remove. Changes are saved automatically. Playback keys act on selected videos, or all videos if none are selected.'
+  hint.textContent = 'Esc or Ctrl+H to close · playback keys act on selected videos, or all videos if none are selected'
   const columns = document.createElement('div')
   columns.className = 'helpColumns'
 
-  overlay.append(header, hint, columns)
-  overlay.addEventListener('mousedown', e => e.stopPropagation())
-  document.documentElement.appendChild(overlay)
-  renderHelp()
-}
-
-function renderHelp() {
-  const overlay = document.getElementById('helpOverlay')
-  if (!overlay) return
-  const columns = overlay.querySelector('.helpColumns')
-  const scroll = overlay.scrollTop
-  columns.textContent = ''
-  const filter = helpFilter.trim().toLowerCase()
-
-  const entries = [
-    ...SHORTCUTS.map(s => ({ ...s, keys: bindings[s.id] || [] })),
-    ...MOUSE_CONTROLS,
-  ]
   const sections = new Map()
-  for (const entry of entries) {
-    const shown = entry.id ? entry.keys.map(k => displayKey(k, isMac)) : entry.keys
-    if (filter && !(entry.label + ' ' + entry.section + ' ' + shown.join(' ')).toLowerCase().includes(filter)) continue
-    if (!sections.has(entry.section)) sections.set(entry.section, [])
-    sections.get(entry.section).push(entry)
+  for (const s of [...SHORTCUTS, ...MOUSE_CONTROLS]) {
+    if (!sections.has(s.section)) sections.set(s.section, [])
+    sections.get(s.section).push(s)
   }
-
-  for (const [name, list] of sections) {
+  for (const [name, entries] of sections) {
     const section = document.createElement('section')
     const heading = document.createElement('h3')
-    heading.textContent = name + (name == 'Mouse' ? ' (fixed)' : '')
+    heading.textContent = name
     section.appendChild(heading)
-    for (const entry of list) section.appendChild(helpRow(entry))
+    for (const entry of entries) {
+      const row = document.createElement('div')
+      row.className = 'helpRow'
+      const label = document.createElement('span')
+      label.textContent = entry.label
+      const keys = document.createElement('span')
+      keys.className = 'helpKeys'
+      for (const combo of entry.keys) {
+        const kbd = document.createElement('kbd')
+        kbd.textContent = entry.id ? displayKey(combo, isMac) : combo
+        keys.appendChild(kbd)
+      }
+      row.append(label, keys)
+      section.appendChild(row)
+    }
     columns.appendChild(section)
   }
-  if (!sections.size) {
-    const empty = document.createElement('p')
-    empty.className = 'helpHint'
-    empty.textContent = 'No shortcuts match.'
-    columns.appendChild(empty)
-  }
-  overlay.scrollTop = scroll
-}
-
-function helpRow(entry) {
-  const row = document.createElement('div')
-  row.className = 'helpRow'
-  const label = document.createElement('span')
-  label.className = 'helpLabel'
-  label.textContent = entry.label
-  const keys = document.createElement('span')
-  keys.className = 'helpKeys'
-  row.append(label, keys)
-
-  if (!entry.id) {
-    for (const text of entry.keys) {
-      const kbd = document.createElement('kbd')
-      kbd.textContent = text
-      keys.appendChild(kbd)
-    }
-    return row
-  }
-
-  const id = entry.id
-  entry.keys.forEach((combo, index) => {
-    const chip = document.createElement('span')
-    chip.className = 'keyChip'
-    const kbd = document.createElement('kbd')
-    const listening = capture && capture.id == id && capture.index == index
-    kbd.textContent = listening ? 'Press keys…' : displayKey(combo, isMac)
-    kbd.classList.toggle('listening', !!listening)
-    kbd.title = 'Click to change'
-    kbd.addEventListener('click', () => startCapture(id, index))
-    const remove = document.createElement('button')
-    remove.className = 'keyRemove'
-    remove.textContent = '×'
-    remove.title = 'Remove this key'
-    remove.addEventListener('click', () => removeKey(id, index))
-    chip.append(kbd, remove)
-    keys.appendChild(chip)
+  overlay.append(title, hint, columns)
+  overlay.addEventListener('mousedown', e => e.stopPropagation())
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeHelp()
   })
-
-  const adding = capture && capture.id == id && capture.index == -1
-  const add = document.createElement('button')
-  add.className = 'keyAdd' + (adding ? ' listening' : '')
-  add.textContent = adding ? 'Press keys…' : (entry.keys.length ? '+' : '+ Add key')
-  add.title = 'Add a key'
-  add.addEventListener('click', () => startCapture(id, -1))
-  keys.appendChild(add)
-
-  if (JSON.stringify(entry.keys) !== JSON.stringify(DEFAULTS[id])) {
-    row.classList.add('changed')
-    const reset = document.createElement('button')
-    reset.className = 'keyReset'
-    reset.textContent = '↺'
-    reset.title = 'Reset to default (' + DEFAULTS[id].map(k => displayKey(k, isMac)).join(', ') + ')'
-    reset.addEventListener('click', () => resetKeys(id))
-    keys.appendChild(reset)
-  }
-  return row
+  document.documentElement.appendChild(overlay)
 }
 
 /* ------------------------------------------------------------------ *
@@ -2020,8 +1815,6 @@ const actions = {
   'reset-transform': resetTransform,
 
   // view
-  'focus-selection': focusSelection,
-  'focus-canvas': focusCanvas,
   'focus-next': () => focusStep(1),
   'focus-prev': () => focusStep(-1),
   'zoom-in': () => zoomBy(1.25),
@@ -2059,8 +1852,6 @@ const actions = {
 
   // video playback
   'play-pause': playPause,
-  'pause-all': () => setAllVideosPlaying(false),
-  'play-all': () => setAllVideosPlaying(true),
   'frame-back': () => withVideos(videos => stepFrames(-1, videos)),
   'frame-forward': () => withVideos(videos => stepFrames(1, videos)),
   'seek-back': () => seekBy(-5),

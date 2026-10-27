@@ -277,72 +277,35 @@ html.canvasLocked {
   inset: 0;
   z-index: 10001;
   overflow: auto;
-  padding: 18px 24px 28px;
-  background: rgb(18 18 18 / 97%);
-  color: #dedede;
-  font: 15px/1.45 system-ui, sans-serif;
+  padding: 16px 20px 24px;
+  background: rgb(18 18 18 / 96%);
+  color: #d8d8d8;
+  font: 12px/1.4 system-ui, sans-serif;
   -webkit-user-select: none;
   user-select: none;
 }
-#helpOverlay .helpHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 #helpOverlay h2 {
-  margin: 0 auto 0 0;
-  font-size: 24px;
+  margin: 0;
+  font-size: 18px;
   font-weight: 600;
-  color: #f2f2f2;
-}
-#helpOverlay .helpSearch {
-  width: 220px;
-  max-width: 100%;
-  padding: 6px 10px;
-  border: 1px solid #444;
-  border-radius: 6px;
-  background: #262626;
-  color: #eee;
-  font: inherit;
-  -webkit-user-select: text;
-  user-select: text;
-}
-#helpOverlay .helpSearch:focus {
-  outline: 2px solid rgb(37 157 199);
-  outline-offset: -1px;
-}
-#helpOverlay button {
-  font: inherit;
-  cursor: pointer;
-}
-#helpOverlay .helpButton {
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 6px;
-  background: #2b2b2b;
-  color: #e6e6e6;
-}
-#helpOverlay .helpButton:hover {
-  background: #363636;
+  color: #f0f0f0;
 }
 #helpOverlay .helpHint {
-  margin: 8px 0 18px;
-  color: #9a9a9a;
-  font-size: 14px;
+  margin: 4px 0 14px;
+  color: #8a8a8a;
 }
 #helpOverlay .helpColumns {
-  columns: 380px;
-  column-gap: 32px;
+  columns: 280px;
+  column-gap: 28px;
 }
 #helpOverlay section {
   break-inside: avoid;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 #helpOverlay h3 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgb(37 157 199);
@@ -350,80 +313,22 @@ html.canvasLocked {
 #helpOverlay .helpRow {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  padding: 5px 0;
-  border-bottom: 1px solid #2c2c2c;
-}
-#helpOverlay .helpRow.changed .helpLabel {
-  color: #f0c75e;
+  gap: 12px;
+  padding: 2px 0;
+  border-bottom: 1px solid #2a2a2a;
 }
 #helpOverlay .helpKeys {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 #helpOverlay kbd {
-  padding: 1px 7px;
-  border: 1px solid #4a4a4a;
-  border-radius: 4px;
+  padding: 0 5px;
+  border: 1px solid #444;
+  border-radius: 3px;
   background: #2a2a2a;
-  color: #f0f0f0;
-  font: 13px/1.6 ui-monospace, monospace;
+  color: #eee;
+  font: 11px/1.6 ui-monospace, monospace;
   white-space: nowrap;
-}
-#helpOverlay .keyChip {
-  display: inline-flex;
-  align-items: center;
-}
-#helpOverlay .keyChip kbd {
-  cursor: pointer;
-}
-#helpOverlay .keyChip kbd:hover {
-  border-color: rgb(37 157 199);
-}
-#helpOverlay kbd.listening,
-#helpOverlay .keyAdd.listening {
-  border-color: rgb(37 157 199);
-  background: rgb(37 157 199 / 25%);
-  color: #fff;
-  font-family: system-ui, sans-serif;
-}
-#helpOverlay .keyRemove,
-#helpOverlay .keyReset {
-  width: 20px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #777;
-  font-size: 16px;
-  line-height: 1;
-}
-#helpOverlay .keyRemove {
-  visibility: hidden;
-  margin-left: 1px;
-}
-#helpOverlay .keyChip:hover .keyRemove {
-  visibility: visible;
-}
-#helpOverlay .keyRemove:hover {
-  color: #e06c6c;
-}
-#helpOverlay .keyReset:hover {
-  color: #f0c75e;
-}
-#helpOverlay .keyAdd {
-  padding: 1px 7px;
-  border: 1px dashed #4a4a4a;
-  border-radius: 4px;
-  background: none;
-  color: #9a9a9a;
-  font-size: 13px;
-  line-height: 1.6;
-}
-#helpOverlay .keyAdd:hover {
-  border-color: rgb(37 157 199);
-  color: #e6e6e6;
 }
