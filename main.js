@@ -70,6 +70,8 @@ app.whenReady().then(() => {
   mainWin.on('ready-to-show', () => {
     mainWin.show();
   });
+  // Start maximized (Ctrl+F or right-click > Window > Maximize toggles back)
+  mainWin.maximize();
   mainWin.webContents.on('did-finish-load', () => {
     loadMostRecent()
   });
@@ -422,7 +424,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(contextMenu)
 
   if (process.argv.indexOf("debug") > -1)
-    mainWin.webContents.openDevTools()
+    mainWin.webContents.openDevTools({ mode: 'detach' })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
