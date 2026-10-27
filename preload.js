@@ -709,7 +709,7 @@ ipcRenderer.on('clipboard', (event, msg) => {
   }
   if (!payload.type) return
   pushUndo()
-  if (/youtube.com\/.*v=([^\?]*)/.test(payload[payload.type])) {
+  if (mediaTypeForPath(payload[payload.type]) == 'youtube') {
     addMediaWithPath(payload[payload.type], "youtube")
   } else
     addMediaWithPath(payload[payload.type], payload.type)
@@ -773,25 +773,20 @@ function addMediaWithPath(path, type = 'img', loadedState) {
     srcElement.src = path;
     mediaElement.appendChild(srcElement)
   } else if (type == 'youtube') {
-    if (/youtube.com\/.*v=([^\?]*)/.test(path)) {
+    var code = extractYoutubeId(path)
+    if (!code) return;
+    mediaElement = document.createElement('div')
+    mediaElement.classList.add('youtubePlayer')
+    mediaElement.classList.add('playerNeedsSetup')
+    mediaElement.dataset.idcode = code
 
-      var code = extractYoutubeId(path)
-      if (code == null) return;
-      mediaElement = document.createElement('div')
-      mediaElement.classList.add('youtubePlayer')
-      mediaElement.classList.add('playerNeedsSetup')
-      mediaElement.dataset.idcode = code
+    mediaElement.style.width = (loadedState.width || 640) + "px";
+    mediaElement.style.height = (loadedState.height || 360) + "px";
 
-      mediaElement.style.width = (loadedState.width || 640) + "px";
-      mediaElement.style.height = (loadedState.height || 360) + "px";
-
-      var iframeDiv = document.createElement('div')
-      iframeDiv.classList.add('iframeDiv')
-      mediaElement.appendChild(iframeDiv)
-      document.getElementById('eventTrigger').dataset.youtubetrigger = Date.now()
-    } else {
-      return
-    }
+    var iframeDiv = document.createElement('div')
+    iframeDiv.classList.add('iframeDiv')
+    mediaElement.appendChild(iframeDiv)
+    document.getElementById('eventTrigger').dataset.youtubetrigger = Date.now()
   } else if (type == "text") {
     mediaElement = document.createElement('div')
     mediaElement.classList.add('textElement')

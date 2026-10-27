@@ -8,6 +8,29 @@ This is a remake/clone of AnimRefNewControl, a program that allows you to view i
 ### Youtube video trimming to loop only a specific portion
 ![second preview](github_page/2.gif)
 
+# Features
+- **Images, GIFs, videos and YouTube** on one infinite canvas. Supported files: `png`, `jpg`/`jpeg`, `gif`, `webp`, `bmp`, `svg`, `avif`, `mp4`, `webm`, `mov`, `m4v`, `ogv`, `mkv`.
+- **Video loop editor**: select a video or YouTube item and press `Enter` (or right-click → *Edit Video*) to trim it to just the part you want to loop.
+- **Video playback controls**: play/pause, frame stepping, seeking, speed and volume, for the selected videos or for all of them at once.
+- **Stays on top of other windows**, with adjustable window opacity, a click-through mode, and a lock that stops the window from moving.
+- **Arrange tools**: align, distribute, normalize, pack, stack, and sort by name, path, order added, type, or randomly.
+- **Per-item tools**: flip, grayscale, smooth/pixelated sampling, opacity, rotate, scale and lock.
+- **Shortcuts you can change** (see [Shortcuts](#shortcuts)).
+
+## Adding references
+- **Drag and drop** files onto the window.
+- **Open images / videos** (`Ctrl+I`) to pick files.
+- **Paste** (`Ctrl+V`) a copied file, an image, an image URL, or a YouTube link (`youtube.com/watch?v=…` or `youtu.be/…`). Any other pasted text becomes a text note on the canvas.
+- **Copy/paste between scenes**: items copied in AnimRef keep their size, position and settings when you paste them.
+
+## Scenes
+- Scenes are saved as `.purgif` files (JSON). They save file paths and URLs, not the media itself, so keep your files where they are.
+- When it starts, AnimRef opens your most recent scene, opens maximized, and is set to always stay on top.
+- Right-click → *Recent* lists the scenes you've opened before.
+- You can export a copy of a scene, export only the selected items as a new scene, or copy the source images of all or selected items into a folder (`Ctrl+Alt+I` / `Ctrl+Shift+I`).
+
+The window has no title bar. Right-drag moves it, and right-click opens the menu with most commands.
+
 # How to use
 ## Install on Windows
 1. Install [Node.js](https://nodejs.org) (LTS) and [Git](https://git-scm.com).
@@ -23,7 +46,8 @@ This is a remake/clone of AnimRefNewControl, a program that allows you to view i
 To update later: `git pull`, `npm run make`, and run the new Setup.exe. Your saved shortcuts and recent scenes are kept.
 To uninstall: Windows Settings → Apps → animref → Uninstall.
 
-Windows, Mac, and linux support(need testing on mac and linux; If you're on these platforms please mention how they are in the issues)
+## macOS and Linux
+`npm run make` builds a `.dmg` on macOS and `.deb`, `.rpm` and Flatpak packages on Linux, all in `out/make`. The GitHub Actions workflow (`.github/workflows/main.yml`) builds all of these on every push and creates a draft release. These platforms need testing, so if you use one, please tell us how it works in the issues.
 
 ## Shortcuts
 Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **Ctrl+H** in the app to see this list.
@@ -175,9 +199,20 @@ If you want to contribute i recommend [this guide](https://www.dataschool.io/how
 
 ## Building guide
 - if you're looking to contribute prob fork the repo and then clone that locally. use guide above if unfamiliar.
-- Install nodejs(I use node version 19)
-- in the local repo run `npm install`
-- Running: `npm run start`
-- Packaging: `npm run package` this makes a simple runnable non-installer(.exe for Windows, .dmg for macOS, or .deb for Linux) in out/AnimRef...
-- Make: `npm run make` this makes an installer in out/make
-- For debugging you can press F12 to open the dev console, or start with `npx electron . debug`.
+- Install Node.js. CI uses Node 19; newer LTS versions also work.
+- In the local repo, run `npm install`.
+- Run: `npm start`
+- Package: `npm run package` builds an unpacked app you can run, without an installer, in `out/animref-<platform>-<arch>/`.
+- Make: `npm run make` builds the installers and packages in `out/make` (Squirrel `Setup.exe` on Windows, `.dmg` on macOS, `.deb`/`.rpm`/Flatpak on Linux).
+- Debugging: press F12 to toggle developer tools, or run `npx electron . debug` to open them in their own window at startup.
+
+### Code layout
+| File | What it does |
+|---|---|
+| `main.js` | Electron main process: the window, right-click menu, clipboard, file dialogs, saving and loading scenes, recent scenes, window settings |
+| `preload.js` | Canvas logic: adding media, selection, transforms, arrange tools, camera, video playback, loop editor, undo/redo, keyboard handling |
+| `renderer.js` | YouTube player setup and the loop editor slider (noUiSlider) |
+| `shortcuts.js` | The one place shortcuts are defined: default keys, help list, and turning keys into Electron accelerators |
+| `index.html` / `index.css` | Page markup and styles |
+
+Changed shortcuts and recent scenes are stored with `electron-store`.
