@@ -46,6 +46,7 @@ const SHORTCUTS = [
   { id: 'arrange-name', section: 'Arrange', label: 'Arrange by name', keys: ['Ctrl+Alt+KeyN'] },
   { id: 'arrange-order', section: 'Arrange', label: 'Arrange by order', keys: ['Ctrl+Alt+KeyO'] },
   { id: 'arrange-path', section: 'Arrange', label: 'Arrange by path', keys: ['Ctrl+Alt+KeyD'] },
+  { id: 'arrange-type', section: 'Arrange', label: 'Arrange: videos on top, pictures below', keys: ['Ctrl+Alt+KeyV'] },
   { id: 'arrange-random', section: 'Arrange', label: 'Arrange randomly', keys: ['Ctrl+Alt+KeyR'] },
   { id: 'pack-all', section: 'Arrange', label: 'Pack all and optimize', keys: ['Ctrl+Alt+KeyP'] },
   { id: 'optimize-canvas', section: 'Arrange', label: 'Optimize canvas', keys: ['Ctrl+KeyO'] },
@@ -55,8 +56,8 @@ const SHORTCUTS = [
   { id: 'normalize-scale', section: 'Arrange', label: 'Normalize scale', keys: ['Ctrl+Alt+ArrowDown'] },
   { id: 'overlay', section: 'Arrange', label: 'Overlay selection', keys: ['Ctrl+KeyY'] },
   { id: 'stack', section: 'Arrange', label: 'Stack', keys: ['Ctrl+Alt+KeyS'] },
-  { id: 'send-to-front', section: 'Arrange', label: 'Send to front', keys: ['ArrowUp'] },
-  { id: 'send-to-back', section: 'Arrange', label: 'Send to back', keys: ['ArrowDown'] },
+  { id: 'send-to-front', section: 'Arrange', label: 'Send to front', keys: ['PageUp'] },
+  { id: 'send-to-back', section: 'Arrange', label: 'Send to back', keys: ['PageDown'] },
 
   // --- Image ---
   { id: 'flip-horizontal', section: 'Image', label: 'Flip horizontally', keys: ['Alt+Shift+KeyH'] },
@@ -100,6 +101,8 @@ const SHORTCUTS = [
   { id: 'frame-forward', section: 'Video playback', label: 'Step one frame forward', keys: ['Period'], repeat: true, inEdit: true },
   { id: 'seek-back', section: 'Video playback', label: 'Jump back 5 seconds', keys: ['KeyJ'], repeat: true, inEdit: true },
   { id: 'seek-forward', section: 'Video playback', label: 'Jump forward 5 seconds', keys: ['KeyL'], repeat: true, inEdit: true },
+  { id: 'volume-up', section: 'Video playback', label: 'Volume up', keys: ['ArrowUp'], repeat: true, inEdit: true },
+  { id: 'volume-down', section: 'Video playback', label: 'Volume down', keys: ['ArrowDown'], repeat: true, inEdit: true },
   { id: 'toggle-mute', section: 'Video playback', label: 'Mute / unmute', keys: ['KeyM'], inEdit: true },
   { id: 'speed-down', section: 'Video playback', label: 'Slower', keys: ['BracketLeft'], repeat: true, inEdit: true },
   { id: 'speed-up', section: 'Video playback', label: 'Faster', keys: ['BracketRight'], repeat: true, inEdit: true },
@@ -128,7 +131,7 @@ const KEY_NAMES = {
   ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
   Equal: '=', Minus: '-', NumpadAdd: 'Num+', NumpadSubtract: 'Num-', Numpad0: 'Num0',
   Comma: ',', Period: '.', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
-  Escape: 'Esc', Delete: 'Del', Backspace: 'Backspace', Enter: 'Enter', Space: 'Space',
+  Escape: 'Esc', Delete: 'Del', PageUp: 'PgUp', PageDown: 'PgDn', Backspace: 'Backspace', Enter: 'Enter', Space: 'Space',
 }
 
 function displayKey(combo, isMac) {

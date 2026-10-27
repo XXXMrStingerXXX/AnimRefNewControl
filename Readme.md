@@ -17,7 +17,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 
 **You can change any key:** in the Ctrl+H panel, click a key and press the new one, use **+** to add another key and **×** to remove one, and use **↺** or **Reset all** to go back to the defaults. Changes are saved automatically. Giving a key to one action takes it away from any other action that used it. For example, bind Space to *Play / pause* to start and stop videos with the space bar. Holding Space and dragging still pans. The right-click menu always shows the default keys.
 
-> Changed from earlier AnimRef versions: New Scene is now **Ctrl+K** (was Ctrl+N), Close is **Ctrl+Q** (Ctrl+W now locks the window), and developer tools moved to **F12**.
+> Changed from earlier AnimRef versions: New Scene is now **Ctrl+K** (was Ctrl+N), Close is **Ctrl+Q** (Ctrl+W now locks the window), developer tools moved to **F12**, and the Up/Down arrows control video volume (send to front/back is **Page Up / Page Down**).
 
 ### Scene & files
 | Action | Default keys |
@@ -63,6 +63,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Arrange by name | `Ctrl+Alt+N` |
 | Arrange by order | `Ctrl+Alt+O` |
 | Arrange by path | `Ctrl+Alt+D` |
+| Arrange: videos on top, pictures below | `Ctrl+Alt+V` |
 | Arrange randomly | `Ctrl+Alt+R` |
 | Pack all and optimize | `Ctrl+Alt+P` |
 | Optimize canvas | `Ctrl+O` |
@@ -72,8 +73,8 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Normalize scale | `Ctrl+Alt+Down` |
 | Overlay selection | `Ctrl+Y` |
 | Stack | `Ctrl+Alt+S` |
-| Send to front | `Up` |
-| Send to back | `Down` |
+| Send to front | `PgUp` |
+| Send to back | `PgDn` |
 
 ### Image
 | Action | Default keys |
@@ -125,6 +126,8 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Step one frame forward | `.` |
 | Jump back 5 seconds | `J` |
 | Jump forward 5 seconds | `L` |
+| Volume up | `Up` |
+| Volume down | `Down` |
 | Mute / unmute | `M` |
 | Slower | `[` |
 | Faster | `]` |
@@ -145,7 +148,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Step video frames | `Alt+Scroll over a video` |
 | Move window / context menu | `Right drag / Right click` |
 
-Playback keys act on the selected videos, or on every video when none are selected. In the loop editor (Enter on a video), plain scrolling steps frames too.
+Playback and volume keys act on the selected videos, or on every video when none are selected. Videos start muted; Up turns the sound on. In the loop editor (Enter on a video), plain scrolling steps frames too.
 
 Not supported by Electron: *Always on bottom*. Window opacity and *Lock window* moving are Windows/macOS only.
 ## Want to add/suggest more shortcuts?

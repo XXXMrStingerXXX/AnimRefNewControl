@@ -11,34 +11,19 @@ const {
 
 const isMac = process.platform === 'darwin'
 
-// Diagnostic log (test build): written by main.js to animref-debug.log in the app's data folder.
-function debugLog(...parts) {
-  try {
-    ipcRenderer.send('debug-log', 'page: ' + parts.map(p => typeof p == 'string' ? p : JSON.stringify(p)).join(' '))
-  } catch (err) { }
-}
-window.addEventListener('error', e => debugLog('ERROR', e.message, e.filename + ':' + e.lineno))
-window.addEventListener('unhandledrejection', e => debugLog('UNHANDLED', String(e.reason && e.reason.stack || e.reason)))
-window.addEventListener('focus', () => debugLog('window focus'))
-window.addEventListener('blur', () => debugLog('window blur'))
+// Key bindings: defaults from shortcuts.js plus the user's changes from the Ctrl+H panel.
+// Saved keys are fetched asynchronously after the page loads. A blocking call here
+// (sendSync or localStorage) froze the right-click menu on Windows.
+let keyOverrides = {}
+let bindings = effectiveBindings(keyOverrides)
+let keyMap = buildKeyMap(bindings)
 window.addEventListener('load', () => {
   ipcRenderer.invoke('get-keybinds').then(saved => {
     keyOverrides = saved || {}
     bindings = effectiveBindings(keyOverrides)
     keyMap = buildKeyMap(bindings)
-    debugLog('loaded saved keys', Object.keys(keyOverrides).length)
-  }).catch(err => debugLog('could not load saved keys', String(err)))
+  }).catch(() => { })
 })
-document.addEventListener('mousedown', e => { if (e.button != 0) debugLog('mousedown button', e.button) }, true)
-document.addEventListener('mouseup', e => { if (e.button != 0) debugLog('mouseup button', e.button) }, true)
-document.addEventListener('contextmenu', () => debugLog('contextmenu event'), true)
-document.addEventListener('keydown', e => debugLog('keydown', e.code, e.ctrlKey ? 'ctrl' : '', e.altKey ? 'alt' : '', e.shiftKey ? 'shift' : ''), true)
-
-// Key bindings: defaults from shortcuts.js plus the user's changes from the Ctrl+H panel.
-// Saved keys are fetched asynchronously after the page loads (no blocking calls at startup).
-let keyOverrides = {}
-let bindings = effectiveBindings(keyOverrides)
-let keyMap = buildKeyMap(bindings)
 const VIDEO_EXTENSIONS = /\.(mp4|webm|mov|m4v|ogv|mkv)$/i
 const CLIPBOARD_PREFIX = 'animref-clipboard:'
 
@@ -1392,6 +1377,22 @@ function arrangeItems(kind, objs) {
   const totalArea = items.reduce((sum, i) => sum + i.box.w * i.box.h, 0)
   const aspect = window.innerWidth / window.innerHeight
   const rowWidth = Math.max(Math.max(...items.map(i => i.box.w)), Math.sqrt(totalArea * aspect))
+
+  if (kind == 'type') {
+    // Videos packed on top, pictures packed below, with a clear gap between the two groups.
+    const byAddition = (a, b) => a.o.addedAt - b.o.addedAt
+    const videos = items.filter(i => isVideoObj(i.o)).sort(byAddition)
+    const pictures = items.filter(i => !isVideoObj(i.o)).sort(byAddition)
+    const gap = Math.max(40, rowWidth * 0.05)
+    const videosBottom = packRows(videos, origin.x, origin.y, rowWidth)
+    packRows(pictures, origin.x, videos.length ? videosBottom + gap : origin.y, rowWidth)
+    return
+  }
+  packRows(items, origin.x, origin.y, rowWidth)
+}
+
+// Places items in rows starting at (x0, y0); returns the y of the bottom edge.
+function packRows(items, x0, y0, rowWidth) {
   let x = 0, y = 0, rowHeight = 0
   for (const it of items) {
     if (x > 0 && x + it.box.w > rowWidth) {
@@ -1399,10 +1400,11 @@ function arrangeItems(kind, objs) {
       y += rowHeight
       rowHeight = 0
     }
-    setPos(it.o, origin.x + x, origin.y + y)
+    setPos(it.o, x0 + x, y0 + y)
     x += it.box.w
     rowHeight = Math.max(rowHeight, it.box.h)
   }
+  return y0 + y + rowHeight
 }
 
 function arrange(kind) {
@@ -1411,7 +1413,7 @@ function arrange(kind) {
   if (!targets.length) return
   pushUndo()
   arrangeItems(kind, targets)
-  hud('Arranged ' + (kind == 'optimal' ? '' : 'by ' + kind))
+  hud(kind == 'type' ? 'Videos on top, pictures below' : 'Arranged ' + (kind == 'optimal' ? '' : 'by ' + kind))
 }
 
 function align(edge) {
@@ -1715,6 +1717,20 @@ function toggleMute() {
       if (!mute && v.volume == 0) v.volume = 1
     })
     hud(mute ? 'Muted' : 'Sound on')
+  })
+}
+
+// Up/down in 10% steps. Videos start muted, so raising the volume unmutes them.
+function changeVolume(dir) {
+  withVideos(videos => {
+    const first = videos[0]
+    const current = first.muted ? 0 : first.volume
+    const next = Math.round(Math.min(Math.max(current + dir * 0.1, 0), 1) * 10) / 10
+    videos.forEach(v => {
+      v.volume = Math.max(next, 0)
+      v.muted = next == 0
+    })
+    hud(next == 0 ? 'Muted' : `Volume ${Math.round(next * 100)}%`)
   })
 }
 
@@ -2050,6 +2066,7 @@ const actions = {
   'arrange-order': () => arrange('order'),
   'arrange-path': () => arrange('path'),
   'arrange-random': () => arrange('random'),
+  'arrange-type': () => arrange('type'),
   'pack-all': () => {
     if (!state.elements.length) return
     pushUndo()
@@ -2135,6 +2152,8 @@ const actions = {
   'seek-back': () => seekBy(-5),
   'seek-forward': () => seekBy(5),
   'toggle-mute': toggleMute,
+  'volume-up': () => changeVolume(1),
+  'volume-down': () => changeVolume(-1),
   'speed-down': () => changeSpeed(-1),
   'speed-up': () => changeSpeed(1),
   'speed-reset': () => changeSpeed(0),

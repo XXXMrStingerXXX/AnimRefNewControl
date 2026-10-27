@@ -25,15 +25,6 @@ const MEDIA_FILTERS = [
 ]
 const CLIPBOARD_PREFIX = 'animref-clipboard:'
 
-// Diagnostic log (test build) — %APPDATA%\\animref\\animref-debug.log on Windows
-let debugLogPath = null
-function debugLog(message) {
-  try {
-    if (!debugLogPath) debugLogPath = path.join(app.getPath('userData'), 'animref-debug.log')
-    fs.appendFileSync(debugLogPath, new Date().toISOString().slice(11, 23) + ' ' + message + '\n')
-  } catch (err) { }
-}
-
 let width = 400;
 let height = 300;
 
@@ -62,18 +53,9 @@ function accel(combo) {
 }
 
 let windowIsReady = false;
-let dragLogged = false;
 
 app.whenReady().then(() => {
-  try { fs.writeFileSync(path.join(app.getPath('userData'), 'animref-debug.log'), '') } catch (err) { }
-  debugLog('main: start, electron ' + process.versions.electron + ', ' + process.platform)
   const mainWin = createWindow()
-  mainWin.on('unresponsive', () => debugLog('main: PAGE UNRESPONSIVE'))
-  mainWin.on('responsive', () => debugLog('main: page responsive again'))
-  mainWin.webContents.on('render-process-gone', (e, details) => debugLog('main: PAGE CRASHED ' + JSON.stringify(details)))
-  mainWin.on('focus', () => debugLog('main: window focus'))
-  mainWin.on('blur', () => debugLog('main: window blur'))
-  ipcMain.on('debug-log', (event, message) => debugLog(message))
   ipcMain.handle('get-keybinds', () => {
     const saved = store.get('keybinds')
     return saved && typeof saved === 'object' ? saved : {}
@@ -344,7 +326,6 @@ app.whenReady().then(() => {
   }
 
   function toggleMaximize() {
-    debugLog('main: toggle maximize')
     if (!mainWin.isMaximized()) mainWin.maximize();
     else mainWin.unmaximize();
   }
@@ -404,6 +385,7 @@ app.whenReady().then(() => {
   arrangeSubmenu.append(new MenuItem({ label: 'Arrange by name', ...accel('CmdOrCtrl+Alt+N'), click: runInRenderer('arrange-name') }))
   arrangeSubmenu.append(new MenuItem({ label: 'Arrange by addition', ...accel('CmdOrCtrl+Alt+A'), click: runInRenderer('arrange-addition') }))
   arrangeSubmenu.append(new MenuItem({ label: 'Arrange randomly', ...accel('CmdOrCtrl+Alt+R'), click: runInRenderer('arrange-random') }))
+  arrangeSubmenu.append(new MenuItem({ label: 'Videos on top, pictures below', ...accel('CmdOrCtrl+Alt+V'), click: runInRenderer('arrange-type') }))
   arrangeSubmenu.append(new MenuItem({ label: 'Pack all and optimize', ...accel('CmdOrCtrl+Alt+P'), click: runInRenderer('pack-all') }))
   arrangeSubmenu.append(new MenuItem({ type: 'separator' }))
   arrangeSubmenu.append(new MenuItem({ label: 'Flip horizontally', ...accel('Alt+Shift+H'), click: runInRenderer('flip-horizontal') }))
@@ -460,7 +442,6 @@ app.whenReady().then(() => {
     windowIsReady = true;
   });
   ipcMain.on('show-context-menu', (event, menuType) => {
-    debugLog('main: show-context-menu ' + menuType)
     const win = BrowserWindow.fromWebContents(event.sender)
     contextMenu.getMenuItemById("edit-video").visible = false;
     contextMenu.getMenuItemById("close-edit-video").visible = false;
@@ -469,9 +450,7 @@ app.whenReady().then(() => {
     } else if (menuType == 'edit-video') {
       contextMenu.getMenuItemById("close-edit-video").visible = true;
     }
-    debugLog('main: opening popup')
-    contextMenu.popup({ window: win, callback: () => debugLog('main: popup closed') })
-    debugLog('main: popup call returned')
+    contextMenu.popup({ window: win, callback: () => { } })
   })
   ipcMain.on('handle-paste', () => {
     handlePaste()
@@ -484,7 +463,6 @@ app.whenReady().then(() => {
     height = mainWin.getSize()[1]
   })
   ipcMain.on('move-electron-window', (event, x, y, initPos) => {
-    if (!dragLogged) { debugLog('main: window drag ' + JSON.stringify([x, y, initPos])); dragLogged = true; setTimeout(() => { dragLogged = false }, 1000) }
     if (windowState.locked || mainWin.isMaximized()) return
     mainWin.setBounds({
       width: width,
@@ -497,10 +475,6 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
-})
-
-process.on('uncaughtException', (err) => {
-  debugLog('main: UNCAUGHT ' + (err && err.stack || err))
 })
 
 app.on('window-all-closed', () => {
