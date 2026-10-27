@@ -501,8 +501,11 @@ document.addEventListener('mousemove', (e) => {
   } else if (e.buttons == 4) { // middle mouse drag = move
     e.preventDefault()
     handleMove(e.movementX, e.movementY)
-  } else if (e.buttons == 2) {
+  } else if (e.buttons == 2 && mouseObj.initClientPos) {
     e.preventDefault()
+    // Only start moving the window after a real drag, so a plain right-click just opens the menu.
+    const moved = Math.hypot(e.screenX - mouseObj.initClientPos.x, e.screenY - mouseObj.initClientPos.y)
+    if (!mouseObj.dragging && moved < 4) return
     ipcRenderer.send('move-electron-window', e.screenX, e.screenY, mouseObj.initPos)
     mouseObj.dragging = true;
   }

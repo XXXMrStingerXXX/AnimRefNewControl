@@ -454,7 +454,10 @@ app.whenReady().then(() => {
     menu.append(new MenuItem({ label: 'Shortcuts (edit keys)', ...accel('help'), click: runInRenderer('help') }));
     menu.append(new MenuItem({ label: 'Close', ...accel('close'), click: () => mainWin.close() }));
 
-    Menu.setApplicationMenu(menu)
+    // No application menu: on Windows/Linux a borderless window still gets an invisible
+    // menu bar, and pressing Alt would activate it and swallow every following key.
+    // The menu is only used as the right-click popup.
+    Menu.setApplicationMenu(null)
   }
   buildMenu()
 
@@ -488,7 +491,16 @@ app.whenReady().then(() => {
     } else if (menuType == 'edit-video') {
       contextMenu.getMenuItemById("close-edit-video").visible = true;
     }
-    contextMenu.popup(win)
+    contextMenu.popup({
+      window: win,
+      // hand the keyboard back to the page so shortcuts keep working after the menu closes
+      callback: () => {
+        if (!win.isDestroyed()) {
+          win.focus()
+          win.webContents.focus()
+        }
+      },
+    })
   })
   ipcMain.on('handle-paste', () => {
     handlePaste()
@@ -502,13 +514,17 @@ app.whenReady().then(() => {
   })
   ipcMain.on('move-electron-window', (event, x, y, initPos) => {
     if (windowState.locked || mainWin.isMaximized()) return
-    mainWin.setBounds({
-      width: width,
-      height: height,
-      x: x - initPos.x,
-      y: y - initPos.y
-    });
+    // positions can be fractional on scaled (high-DPI) screens; Electron needs whole numbers
+    const nx = Math.round(x - initPos.x)
+    const ny = Math.round(y - initPos.y)
+    if (!Number.isFinite(nx) || !Number.isFinite(ny)) return
+    mainWin.setPosition(nx, ny)
   })
+})
+
+// Log unexpected errors instead of showing Electron's blocking error dialog.
+process.on('uncaughtException', (err) => {
+  console.error('Unexpected error in main process:', err)
 })
 
 app.on('will-quit', () => {
