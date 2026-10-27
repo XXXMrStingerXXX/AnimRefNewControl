@@ -14,6 +14,7 @@ const {
 const path = require('path')
 const fs = require('fs');
 const Store = require('electron-store');
+const { effectiveBindings, displayKey, toAccelerator } = require('./shortcuts.js')
 
 const store = new Store();
 
@@ -46,20 +47,26 @@ function createWindow() {
 }
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 
-// Menu items show their shortcut but don't register it: the renderer handles every key
-// (see shortcuts.js) so each shortcut has exactly one code path.
-function accel(combo) {
-  return { accelerator: combo, registerAccelerator: false }
+// Key bindings: defaults from shortcuts.js plus the user's changes from the Ctrl+H panel.
+function loadKeyOverrides() {
+  const saved = store.get('keybinds')
+  return saved && typeof saved === 'object' ? saved : {}
+}
+let bindings = effectiveBindings(loadKeyOverrides())
+
+// Menu items show their action's current shortcut but don't register it: the renderer
+// handles every key (see shortcuts.js) so each shortcut has exactly one code path.
+function accel(actionId) {
+  const combo = (bindings[actionId] || [])[0]
+  return combo ? { accelerator: toAccelerator(combo), registerAccelerator: false } : {}
 }
 
 let windowIsReady = false;
 
 app.whenReady().then(() => {
   const mainWin = createWindow()
-  const contextMenu = new Menu()
-  const recentSubmenu = new Menu()
-  const windowSubmenu = new Menu()
-  const arrangeSubmenu = new Menu()
+  let contextMenu = new Menu()
+  let recentSubmenu = new Menu()
 
   const windowState = {
     locked: false,
@@ -281,17 +288,33 @@ app.whenReady().then(() => {
     hud(on ? 'Window locked' : 'Window unlocked')
   }
 
-  const clickThroughShortcut = 'CommandOrControl+T'
+  let clickThroughShortcut = null
   function setClickThrough(on) {
     windowState.clickThrough = on
     mainWin.setIgnoreMouseEvents(on, { forward: true })
     contextMenu.getMenuItemById('click-through').checked = on
+    if (clickThroughShortcut && globalShortcut.isRegistered(clickThroughShortcut)) globalShortcut.unregister(clickThroughShortcut)
+    clickThroughShortcut = null
     if (on) {
       // The window no longer gets clicks (or focus), so listen system-wide to turn it back off.
-      globalShortcut.register(clickThroughShortcut, () => setClickThrough(false))
-      hud(`Click-through on — press ${isMac ? 'Cmd' : 'Ctrl'}+T anywhere to turn it off`)
+      const combo = (bindings['transparent-to-mouse'] || [])[0] || 'Ctrl+KeyT'
+      clickThroughShortcut = toAccelerator(combo)
+      let registered = false
+      try {
+        registered = globalShortcut.register(clickThroughShortcut, () => setClickThrough(false))
+      } catch (err) {
+        registered = false
+      }
+      if (registered) {
+        hud(`Click-through on — press ${displayKey(combo, isMac)} anywhere to turn it off`)
+      } else {
+        clickThroughShortcut = null
+        mainWin.setIgnoreMouseEvents(false)
+        windowState.clickThrough = false
+        contextMenu.getMenuItemById('click-through').checked = false
+        hud(`Couldn't use ${displayKey(combo, isMac)} system-wide, so click-through stayed off`)
+      }
     } else {
-      if (globalShortcut.isRegistered(clickThroughShortcut)) globalShortcut.unregister(clickThroughShortcut)
       hud('Click-through off')
     }
   }
@@ -358,68 +381,91 @@ app.whenReady().then(() => {
 
   /* ---------------- context menu ---------------- */
 
-  contextMenu.append(new MenuItem({
-    id: "close-edit-video", label: 'Close Edit Video', visible: false, ...accel('Esc'),
-    click: () => mainWin.webContents.send('close-edit-video')
-  }));
-  contextMenu.append(new MenuItem({
-    id: "edit-video", label: 'Edit Video', visible: false, ...accel('Enter'),
-    click: () => mainWin.webContents.send('edit-video')
-  }));
-  contextMenu.append(new MenuItem({ label: 'Paste', ...accel('CmdOrCtrl+V'), click: handlePaste }));
-  contextMenu.append(new MenuItem({ label: 'Copy', ...accel('CmdOrCtrl+C'), click: runInRenderer('copy') }));
-  contextMenu.append(new MenuItem({ label: 'Duplicate', ...accel('CmdOrCtrl+D'), click: runInRenderer('duplicate') }));
-  contextMenu.append(new MenuItem({ label: 'Undo', ...accel('CmdOrCtrl+Z'), click: runInRenderer('undo') }));
-  contextMenu.append(new MenuItem({ label: 'Redo', ...accel('CmdOrCtrl+Shift+Z'), click: runInRenderer('redo') }));
-  contextMenu.append(new MenuItem({ type: 'separator' }))
+  // Rebuilt whenever key bindings change so the shortcut hints stay correct.
+  function buildMenu() {
+    const menu = new Menu()
+    const arrangeSubmenu = new Menu()
+    const windowSubmenu = new Menu()
+    recentSubmenu = new Menu()
+    contextMenu = menu
 
-  contextMenu.append(new MenuItem({ label: 'Arrange', type: 'submenu', submenu: arrangeSubmenu }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Arrange optimal', ...accel('CmdOrCtrl+P'), click: runInRenderer('arrange-optimal') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Arrange by name', ...accel('CmdOrCtrl+Alt+N'), click: runInRenderer('arrange-name') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Arrange by addition', ...accel('CmdOrCtrl+Alt+A'), click: runInRenderer('arrange-addition') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Arrange randomly', ...accel('CmdOrCtrl+Alt+R'), click: runInRenderer('arrange-random') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Pack all and optimize', ...accel('CmdOrCtrl+Alt+P'), click: runInRenderer('pack-all') }))
-  arrangeSubmenu.append(new MenuItem({ type: 'separator' }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Flip horizontally', ...accel('Alt+Shift+H'), click: runInRenderer('flip-horizontal') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Toggle grayscale', ...accel('Alt+G'), click: runInRenderer('toggle-grayscale') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Toggle locked', ...accel('Alt+L'), click: runInRenderer('toggle-locked') }))
-  arrangeSubmenu.append(new MenuItem({ label: 'Reset transform', ...accel('CmdOrCtrl+Shift+T'), click: runInRenderer('reset-transform') }))
+    menu.append(new MenuItem({
+      id: "close-edit-video", label: 'Close Edit Video', visible: false, ...accel('escape'),
+      click: () => mainWin.webContents.send('close-edit-video')
+    }));
+    menu.append(new MenuItem({
+      id: "edit-video", label: 'Edit Video', visible: false, ...accel('edit-item'),
+      click: () => mainWin.webContents.send('edit-video')
+    }));
+    menu.append(new MenuItem({ label: 'Paste', ...accel('paste'), click: handlePaste }));
+    menu.append(new MenuItem({ label: 'Copy', ...accel('copy'), click: runInRenderer('copy') }));
+    menu.append(new MenuItem({ label: 'Duplicate', ...accel('duplicate'), click: runInRenderer('duplicate') }));
+    menu.append(new MenuItem({ label: 'Undo', ...accel('undo'), click: runInRenderer('undo') }));
+    menu.append(new MenuItem({ label: 'Redo', ...accel('redo'), click: runInRenderer('redo') }));
+    menu.append(new MenuItem({ type: 'separator' }))
 
-  contextMenu.append(new MenuItem({
-    id: 'always-on-top', label: 'Always on Top', type: 'checkbox', checked: true, ...accel('CmdOrCtrl+Shift+A'),
-    click: (menuItem) => setAlwaysOnTop(menuItem.checked)
-  }));
-  contextMenu.append(new MenuItem({
-    id: 'lock-window', label: 'Lock Window', type: 'checkbox', checked: false, ...accel('CmdOrCtrl+W'),
-    click: (menuItem) => setWindowLocked(menuItem.checked)
-  }));
-  contextMenu.append(new MenuItem({
-    id: 'click-through', label: 'Transparent to Mouse', type: 'checkbox', checked: false, ...accel('CmdOrCtrl+T'),
-    click: (menuItem) => setClickThrough(menuItem.checked)
-  }));
-  contextMenu.append(new MenuItem({ type: 'separator' }))
+    menu.append(new MenuItem({ label: 'Arrange', type: 'submenu', submenu: arrangeSubmenu }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Arrange optimal', ...accel('arrange-optimal'), click: runInRenderer('arrange-optimal') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Arrange by name', ...accel('arrange-name'), click: runInRenderer('arrange-name') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Arrange by addition', ...accel('arrange-addition'), click: runInRenderer('arrange-addition') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Arrange randomly', ...accel('arrange-random'), click: runInRenderer('arrange-random') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Pack all and optimize', ...accel('pack-all'), click: runInRenderer('pack-all') }))
+    arrangeSubmenu.append(new MenuItem({ type: 'separator' }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Flip horizontally', ...accel('flip-horizontal'), click: runInRenderer('flip-horizontal') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Toggle grayscale', ...accel('toggle-grayscale'), click: runInRenderer('toggle-grayscale') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Toggle locked', ...accel('toggle-locked'), click: runInRenderer('toggle-locked') }))
+    arrangeSubmenu.append(new MenuItem({ label: 'Reset transform', ...accel('reset-transform'), click: runInRenderer('reset-transform') }))
 
-  contextMenu.append(new MenuItem({
-    label: "Recent", type: 'submenu',
-    submenu: recentSubmenu
-  }));
-  populateRecent()
-  contextMenu.append(new MenuItem({
-    label: "Window", type: 'submenu',
-    submenu: windowSubmenu
-  }));
-  windowSubmenu.append(new MenuItem({ label: "Maximize", ...accel('CmdOrCtrl+F'), click: toggleMaximize }));
-  windowSubmenu.append(new MenuItem({ label: "Minimize", ...accel('CmdOrCtrl+M'), click: () => mainWin.minimize() }));
-  windowSubmenu.append(new MenuItem({ label: "Resize to Selection", ...accel('CmdOrCtrl+Shift+R'), click: runInRenderer('resize-to-selection') }));
-  contextMenu.append(new MenuItem({ label: 'Open Scene', ...accel('CmdOrCtrl+L'), click: openSceneDialog }));
-  contextMenu.append(new MenuItem({ label: 'Open Images', ...accel('CmdOrCtrl+I'), click: openImages }));
-  contextMenu.append(new MenuItem({ label: 'Save', ...accel('CmdOrCtrl+S'), click: runInRenderer('save') }));
-  contextMenu.append(new MenuItem({ label: 'Save As', ...accel('CmdOrCtrl+Shift+S'), click: runInRenderer('save-as') }));
-  contextMenu.append(new MenuItem({ label: 'New Scene', ...accel('CmdOrCtrl+K'), click: runInRenderer('new-scene') }));
-  contextMenu.append(new MenuItem({ label: 'Shortcuts', ...accel('CmdOrCtrl+H'), click: runInRenderer('help') }));
-  contextMenu.append(new MenuItem({ label: 'Close', ...accel('CmdOrCtrl+Q'), click: () => mainWin.close() }));
+    menu.append(new MenuItem({ label: 'Pause All Videos', ...accel('pause-all'), click: runInRenderer('pause-all') }))
+    menu.append(new MenuItem({ label: 'Play All Videos', ...accel('play-all'), click: runInRenderer('play-all') }))
+    menu.append(new MenuItem({ type: 'separator' }))
 
-  Menu.setApplicationMenu(contextMenu)
+    menu.append(new MenuItem({
+      id: 'always-on-top', label: 'Always on Top', type: 'checkbox', checked: mainWin.isAlwaysOnTop(), ...accel('always-on-top'),
+      click: (menuItem) => setAlwaysOnTop(menuItem.checked)
+    }));
+    menu.append(new MenuItem({
+      id: 'lock-window', label: 'Lock Window', type: 'checkbox', checked: windowState.locked, ...accel('lock-window'),
+      click: (menuItem) => setWindowLocked(menuItem.checked)
+    }));
+    menu.append(new MenuItem({
+      id: 'click-through', label: 'Transparent to Mouse', type: 'checkbox', checked: windowState.clickThrough, ...accel('transparent-to-mouse'),
+      click: (menuItem) => setClickThrough(menuItem.checked)
+    }));
+    menu.append(new MenuItem({ type: 'separator' }))
+
+    menu.append(new MenuItem({
+      label: "Recent", type: 'submenu',
+      submenu: recentSubmenu
+    }));
+    populateRecent()
+    menu.append(new MenuItem({
+      label: "Window", type: 'submenu',
+      submenu: windowSubmenu
+    }));
+    windowSubmenu.append(new MenuItem({ label: "Maximize", ...accel('maximize'), click: toggleMaximize }));
+    windowSubmenu.append(new MenuItem({ label: "Minimize", ...accel('minimize'), click: () => mainWin.minimize() }));
+    windowSubmenu.append(new MenuItem({ label: "Resize to Selection", ...accel('resize-to-selection'), click: runInRenderer('resize-to-selection') }));
+    menu.append(new MenuItem({ label: 'Open Scene', ...accel('open-scene'), click: openSceneDialog }));
+    menu.append(new MenuItem({ label: 'Open Images', ...accel('open-images'), click: openImages }));
+    menu.append(new MenuItem({ label: 'Save', ...accel('save'), click: runInRenderer('save') }));
+    menu.append(new MenuItem({ label: 'Save As', ...accel('save-as'), click: runInRenderer('save-as') }));
+    menu.append(new MenuItem({ label: 'New Scene', ...accel('new-scene'), click: runInRenderer('new-scene') }));
+    menu.append(new MenuItem({ label: 'Shortcuts (edit keys)', ...accel('help'), click: runInRenderer('help') }));
+    menu.append(new MenuItem({ label: 'Close', ...accel('close'), click: () => mainWin.close() }));
+
+    Menu.setApplicationMenu(menu)
+  }
+  buildMenu()
+
+  ipcMain.on('get-keybinds', (event) => {
+    event.returnValue = loadKeyOverrides()
+  })
+  ipcMain.on('set-keybinds', (event, overrides) => {
+    store.set('keybinds', overrides || {})
+    bindings = effectiveBindings(overrides)
+    buildMenu()
+  })
 
   if (process.argv.indexOf("debug") > -1)
     mainWin.webContents.openDevTools()
