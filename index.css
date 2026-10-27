@@ -226,7 +226,7 @@ p {
   box-shadow: inset 5px 6px 7px #d3d1d6, 8px 2px 8px -5px #4b285d;
 }
 
-/* ---- AnimRefNewControl-style controls ---- */
+/* ---- Reference-viewer-style controls ---- */
 #itemHolder.grayscaleCanvas {
   filter: grayscale(1);
 }

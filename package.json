@@ -1,7 +1,7 @@
 {
   "name": "animref",
   "version": "1.1.0",
-  "description": "AnimRefNewControl clone that has support for gifs/videos.",
+  "description": "Reference image viewer that stays on top of other windows, with support for gifs, videos and YouTube.",
   "main": "main.js",
   "scripts": {
     "start": "electron-forge start",

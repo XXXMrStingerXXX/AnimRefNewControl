@@ -1,5 +1,5 @@
 // Single source of truth for AnimRef's keyboard shortcuts.
-// Keys follow AnimRefNewControl's Windows/Linux layout
+// Keys follow the Windows/Linux layout common to reference-image viewers,
 // plus AnimRef's own video playback keys. "Ctrl" means Cmd on macOS.
 //
 // Each key combo is written with KeyboardEvent.code names joined by "+",
