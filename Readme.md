@@ -15,12 +15,10 @@ Windows, Mac, and linux support(need testing on mac and linux; If you're on thes
 ## Shortcuts
 Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **Ctrl+H** in the app to see this list.
 
-**You can change any key:** in the Ctrl+H panel, click a key and press the new one, use **+** to add another key and **×** to remove one, and use **↺** or **Reset all** to go back to the defaults. Changes are saved automatically. Giving a key to one action takes it away from any other action that used it. For example, bind Space to *Play / pause* to start and stop videos with the space bar. Holding Space and dragging still pans. The right-click menu always shows the default keys.
-
 > Changed from earlier AnimRef versions: New Scene is now **Ctrl+K** (was Ctrl+N), Close is **Ctrl+Q** (Ctrl+W now locks the window), and developer tools moved to **F12**.
 
 ### Scene & files
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | New scene | `Ctrl+K` |
 | Open scene | `Ctrl+L` |
@@ -36,7 +34,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Export selected images | `Ctrl+Shift+I` |
 
 ### Edit
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Undo | `Ctrl+Z` |
 | Redo | `Ctrl+Shift+Z` |
@@ -50,7 +48,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Edit item (video loop editor) | `Enter` |
 
 ### Arrange
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Align left | `Ctrl+Left` |
 | Align right | `Ctrl+Right` |
@@ -76,7 +74,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Send to back | `Down` |
 
 ### Image
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Flip horizontally | `Alt+Shift+H` |
 | Flip vertically | `Alt+Shift+V` |
@@ -86,10 +84,8 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Reset transform | `Ctrl+Shift+T` |
 
 ### View
-| Action | Default keys |
+| Action | Keys |
 |---|---|
-| Focus selected image (tap) | `Space` |
-| Focus whole canvas (tap) | `Ctrl+Space` |
 | Focus next image | `Right` |
 | Focus previous image | `Left` |
 | Zoom in | `Ctrl+=` or `Ctrl+Num+` |
@@ -102,11 +98,11 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Help (this list) | `Ctrl+H` |
 
 ### Window
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Always on top | `Ctrl+Shift+A` |
 | Lock window | `Ctrl+W` |
-| Transparent to mouse (Ctrl+T anywhere turns it off) | `Ctrl+T` |
+| Transparent to mouse (Ctrl+T again anywhere to undo) | `Ctrl+T` |
 | Increase window opacity | `Ctrl+Shift+=` or `Ctrl+Shift+Num+` |
 | Decrease window opacity | `Ctrl+Shift+-` or `Ctrl+Shift+Num-` |
 | Resize window to selection | `Ctrl+Shift+R` |
@@ -116,11 +112,9 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Developer tools | `F12` |
 
 ### Video playback
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Play / pause | `K` |
-| Select all videos and pause | `Shift+K` |
-| Select all videos and play | `Ctrl+Shift+K` |
 | Step one frame back | `,` |
 | Step one frame forward | `.` |
 | Jump back 5 seconds | `J` |
@@ -131,7 +125,7 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Normal speed | `\` |
 
 ### Mouse
-| Action | Default keys |
+| Action | Keys |
 |---|---|
 | Select / move item | `Left drag` |
 | Add to / remove from selection | `Shift+Click` |
@@ -142,6 +136,8 @@ Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **C
 | Change item opacity | `Ctrl+Alt+Shift+Left drag` |
 | Pan | `Middle drag` or `Alt+Left drag` or `Space+Left drag` |
 | Zoom | `Scroll` or `Z+Left drag` or `Ctrl+Space+Left drag` |
+| Focus selected image (tap) | `Space` |
+| Focus whole canvas (tap) | `Ctrl+Space` |
 | Step video frames | `Alt+Scroll over a video` |
 | Move window / context menu | `Right drag / Right click` |
 
