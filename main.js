@@ -15,6 +15,11 @@ const path = require('path')
 const fs = require('fs');
 const Store = require('electron-store');
 
+// When the Windows installer starts the app to create or remove its Start menu and desktop
+// shortcuts, electron-squirrel-startup does that and we quit without opening a window.
+const isInstallerEvent = require('electron-squirrel-startup')
+if (isInstallerEvent) app.quit()
+
 const store = new Store();
 
 const isMac = process.platform === 'darwin'
@@ -55,6 +60,7 @@ function accel(combo) {
 let windowIsReady = false;
 
 app.whenReady().then(() => {
+  if (isInstallerEvent) return
   const mainWin = createWindow()
   ipcMain.handle('get-keybinds', () => {
     const saved = store.get('keybinds')

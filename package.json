@@ -1,6 +1,6 @@
 {
   "name": "animref",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "AnimRefNewControl clone that has support for gifs/videos.",
   "main": "main.js",
   "scripts": {

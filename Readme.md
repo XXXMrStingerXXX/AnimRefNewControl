@@ -9,7 +9,20 @@ This is a remake/clone of AnimRefNewControl, a program that allows you to view i
 ![second preview](github_page/2.gif)
 
 # How to use
-Download from releases here: [Releases](https://github.com/lettucegoblin/AnimRef/releases)
+## Install on Windows
+1. Install [Node.js](https://nodejs.org) (LTS) and [Git](https://git-scm.com).
+2. In a terminal, run:
+   ```
+   git clone https://github.com/XXXMrStingerXXX/AnimRefNewControl.git
+   cd AnimRefNewControl
+   npm install
+   npm run make
+   ```
+3. Open `out\make\squirrel.windows\x64` and run **`animref-1.1.0 Setup.exe`**. AnimRef installs and opens, and gets a Start menu entry and a desktop shortcut.
+
+To update later: `git pull`, `npm run make`, and run the new Setup.exe. Your saved shortcuts and recent scenes are kept.
+To uninstall: Windows Settings → Apps → animref → Uninstall.
+
 Windows, Mac, and linux support(need testing on mac and linux; If you're on these platforms please mention how they are in the issues)
 
 ## Shortcuts
@@ -167,4 +180,4 @@ If you want to contribute i recommend [this guide](https://www.dataschool.io/how
 - Running: `npm run start`
 - Packaging: `npm run package` this makes a simple runnable non-installer(.exe for Windows, .dmg for macOS, or .deb for Linux) in out/AnimRef...
 - Make: `npm run make` this makes an installer in out/make
-- For debugging you can press Control+Shift+I to open the dev console.
+- For debugging you can press F12 to open the dev console, or start with `npx electron . debug`.
