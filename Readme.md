@@ -1,7 +1,7 @@
 # Why?
-This is a remake/clone of pureRef, a program that allows you to view images on top of other windows. This is useful for artists who want to reference images while drawing, or for people who want to view images while playing games. Where AnimRef differs is it adds gif, video, and youtube support. The movement of a video for a reference offers a lot of information like depth and scale that a still image can't. This is one of the key parts of what make in person figure drawing so important. It also seems like pureref has no intention of ever adding this feature. 
+This is a remake/clone of AnimRefNewControl, a program that allows you to view images on top of other windows. This is useful for artists who want to reference images while drawing, or for people who want to view images while playing games. Where AnimRef differs is it adds gif, video, and youtube support. The movement of a video for a reference offers a lot of information like depth and scale that a still image can't. This is one of the key parts of what make in person figure drawing so important. It also seems like AnimRefNewControl has no intention of ever adding this feature. 
 
-🚀 You should still support [PureRef](https://www.pureref.com/) if you can! 🚀
+🚀 You should still support AnimRefNewControl if you can! 🚀
 
 # Example Previews
 ![First preview](github_page/1.gif)
@@ -13,7 +13,7 @@ Download from releases here: [Releases](https://github.com/lettucegoblin/AnimRef
 Windows, Mac, and linux support(need testing on mac and linux; If you're on these platforms please mention how they are in the issues)
 
 ## Shortcuts
-Keys follow [PureRef's layout](https://www.pureref.com/handbook/shortcuts/all-shortcuts/) (Cmd instead of Ctrl on macOS). Press **Ctrl+H** in the app to see this list.
+Keys follow AnimRefNewControl's layout (Cmd instead of Ctrl on macOS). Press **Ctrl+H** in the app to see this list.
 
 **You can change any key:** in the Ctrl+H panel, click a key and press the new one, use **+** to add another key and **×** to remove one, and use **↺** or **Reset all** to go back to the defaults. Changes are saved automatically. Giving a key to one action takes it away from any other action that used it. For example, bind Space to *Play / pause* to start and stop videos with the space bar. Holding Space and dragging still pans.
 
