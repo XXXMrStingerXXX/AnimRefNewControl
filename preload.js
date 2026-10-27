@@ -163,7 +163,23 @@ function loadState(loadedState, filePath) {
       addMediaWithPath(item.path, item.type, item)
     }
     ipcRenderer.send('loaded-state', filePath)
+    zoomToFitWhenLoaded()
   }, 1000);
+}
+
+// Zooms out to show the whole scene once its images have their sizes (gives up waiting after 3s).
+function zoomToFitWhenLoaded() {
+  const pending = state.elements
+    .map(o => o.element)
+    .filter(el => el.tagName == 'IMG' && !el.complete)
+    .map(el => new Promise(resolve => {
+      el.addEventListener('load', resolve, { once: true })
+      el.addEventListener('error', resolve, { once: true })
+    }))
+  const timeout = new Promise(resolve => setTimeout(resolve, 3000))
+  Promise.race([Promise.all(pending), timeout]).then(() => {
+    if (state.mode != 'edit-video' && state.elements.length) focusCanvas()
+  })
 }
 
 function serializeObj(o) {
