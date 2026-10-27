@@ -67,6 +67,8 @@ const SHORTCUTS = [
   { id: 'reset-transform', section: 'Image', label: 'Reset transform', keys: ['Ctrl+Shift+KeyT'] },
 
   // --- View ---
+  { id: 'focus-selection', section: 'View', label: 'Focus selected image (tap)', keys: ['Space'] },
+  { id: 'focus-canvas', section: 'View', label: 'Focus whole canvas (tap)', keys: ['Ctrl+Space'] },
   { id: 'focus-next', section: 'View', label: 'Focus next image', keys: ['ArrowRight'] },
   { id: 'focus-prev', section: 'View', label: 'Focus previous image', keys: ['ArrowLeft'] },
   { id: 'zoom-in', section: 'View', label: 'Zoom in', keys: ['Ctrl+Equal', 'Ctrl+NumpadAdd'], repeat: true },
@@ -81,7 +83,7 @@ const SHORTCUTS = [
   // --- Window ---
   { id: 'always-on-top', section: 'Window', label: 'Always on top', keys: ['Ctrl+Shift+KeyA'], inEdit: true },
   { id: 'lock-window', section: 'Window', label: 'Lock window', keys: ['Ctrl+KeyW'], inEdit: true },
-  { id: 'transparent-to-mouse', section: 'Window', label: 'Transparent to mouse (Ctrl+T again anywhere to undo)', keys: ['Ctrl+KeyT'], inEdit: true },
+  { id: 'transparent-to-mouse', section: 'Window', label: 'Transparent to mouse (Ctrl+T anywhere turns it off)', keys: ['Ctrl+KeyT'], inEdit: true },
   { id: 'opacity-up', section: 'Window', label: 'Increase window opacity', keys: ['Ctrl+Shift+Equal', 'Ctrl+Shift+NumpadAdd'], repeat: true, inEdit: true },
   { id: 'opacity-down', section: 'Window', label: 'Decrease window opacity', keys: ['Ctrl+Shift+Minus', 'Ctrl+Shift+NumpadSubtract'], repeat: true, inEdit: true },
   { id: 'resize-to-selection', section: 'Window', label: 'Resize window to selection', keys: ['Ctrl+Shift+KeyR'] },
@@ -92,6 +94,8 @@ const SHORTCUTS = [
 
   // --- Video playback (selected videos, or every video if none is selected) ---
   { id: 'play-pause', section: 'Video playback', label: 'Play / pause', keys: ['KeyK'], inEdit: true },
+  { id: 'pause-all', section: 'Video playback', label: 'Select all videos and pause', keys: ['Shift+KeyK'], inEdit: true },
+  { id: 'play-all', section: 'Video playback', label: 'Select all videos and play', keys: ['Ctrl+Shift+KeyK'], inEdit: true },
   { id: 'frame-back', section: 'Video playback', label: 'Step one frame back', keys: ['Comma'], repeat: true, inEdit: true },
   { id: 'frame-forward', section: 'Video playback', label: 'Step one frame forward', keys: ['Period'], repeat: true, inEdit: true },
   { id: 'seek-back', section: 'Video playback', label: 'Jump back 5 seconds', keys: ['KeyJ'], repeat: true, inEdit: true },
@@ -101,6 +105,9 @@ const SHORTCUTS = [
   { id: 'speed-up', section: 'Video playback', label: 'Faster', keys: ['BracketRight'], repeat: true, inEdit: true },
   { id: 'speed-reset', section: 'Video playback', label: 'Normal speed', keys: ['Backslash'], inEdit: true },
 ]
+
+// Keys bound to Space fire when Space is tapped (pressed and released without dragging),
+// because holding Space and dragging always pans the canvas.
 
 // Mouse and hold-key controls. Shown in the help overlay; handled directly in preload.js.
 const MOUSE_CONTROLS = [
@@ -113,8 +120,6 @@ const MOUSE_CONTROLS = [
   { section: 'Mouse', label: 'Change item opacity', keys: ['Ctrl+Alt+Shift+Left drag'] },
   { section: 'Mouse', label: 'Pan', keys: ['Middle drag', 'Alt+Left drag', 'Space+Left drag'] },
   { section: 'Mouse', label: 'Zoom', keys: ['Scroll', 'Z+Left drag', 'Ctrl+Space+Left drag'] },
-  { section: 'Mouse', label: 'Focus selected image (tap)', keys: ['Space'] },
-  { section: 'Mouse', label: 'Focus whole canvas (tap)', keys: ['Ctrl+Space'] },
   { section: 'Mouse', label: 'Step video frames', keys: ['Alt+Scroll over a video'] },
   { section: 'Mouse', label: 'Move window / context menu', keys: ['Right drag / Right click'] },
 ]
@@ -146,18 +151,62 @@ function comboFromEvent(evt, isMac) {
   return parts.join('+')
 }
 
-function buildKeyMap() {
+const MODIFIER_CODES = new Set(['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight', 'CapsLock'])
+
+// Puts modifiers in a fixed Ctrl, Alt, Shift order so combos compare equal.
+function normalizeCombo(combo) {
+  const parts = combo.split('+')
+  const code = parts.pop()
+  return [...['Ctrl', 'Alt', 'Shift'].filter(m => parts.includes(m)), code].join('+')
+}
+
+function defaultBindings() {
+  const bindings = {}
+  for (const s of SHORTCUTS) bindings[s.id] = s.keys.map(normalizeCombo)
+  return bindings
+}
+
+// Saved overrides only list the actions the user changed.
+function effectiveBindings(overrides = {}) {
+  const bindings = defaultBindings()
+  for (const [id, keys] of Object.entries(overrides || {})) {
+    if (id in bindings && Array.isArray(keys)) bindings[id] = keys.map(normalizeCombo)
+  }
+  return bindings
+}
+
+function buildKeyMap(bindings = defaultBindings()) {
+  const byId = new Map(SHORTCUTS.map(s => [s.id, s]))
   const map = new Map()
-  for (const shortcut of SHORTCUTS) {
-    for (const combo of shortcut.keys) {
-      // normalise modifier order to Ctrl, Alt, Shift
-      const parts = combo.split('+')
-      const code = parts.pop()
-      const ordered = ['Ctrl', 'Alt', 'Shift'].filter(m => parts.includes(m))
-      map.set([...ordered, code].join('+'), shortcut)
-    }
+  for (const [id, keys] of Object.entries(bindings)) {
+    const shortcut = byId.get(id)
+    if (!shortcut) continue
+    for (const combo of keys) map.set(normalizeCombo(combo), shortcut)
   }
   return map
 }
 
-module.exports = { SHORTCUTS, MOUSE_CONTROLS, displayKey, comboFromEvent, buildKeyMap }
+const ACCELERATOR_NAMES = {
+  Equal: '=', Minus: '-', Comma: ',', Period: '.', BracketLeft: '[', BracketRight: ']', Backslash: '\\',
+  Escape: 'Esc', NumpadAdd: 'numadd', NumpadSubtract: 'numsub', Numpad0: 'num0',
+  ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Semicolon: ';', Quote: "'",
+  Slash: '/', Backquote: '`',
+}
+
+// Converts "Ctrl+Shift+KeyA" into an Electron accelerator such as "CmdOrCtrl+Shift+A".
+function toAccelerator(combo) {
+  if (!combo) return undefined
+  return combo.split('+').map(part => {
+    if (part === 'Ctrl') return 'CmdOrCtrl'
+    if (part === 'Alt' || part === 'Shift') return part
+    if (part.startsWith('Key')) return part.slice(3)
+    if (part.startsWith('Digit')) return part.slice(5)
+    if (part.startsWith('Numpad') && /\d$/.test(part)) return 'num' + part.slice(6)
+    return ACCELERATOR_NAMES[part] || part
+  }).join('+')
+}
+
+module.exports = {
+  SHORTCUTS, MOUSE_CONTROLS, MODIFIER_CODES,
+  displayKey, comboFromEvent, normalizeCombo, defaultBindings, effectiveBindings, buildKeyMap, toAccelerator,
+}
